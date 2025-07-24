@@ -1,0 +1,59 @@
+package ai.worlds.vacuum;
+
+import java.util.Vector;
+import java.util.Random;
+
+public class HilbertAgente1VacuumAgent extends VacuumAgent {
+
+    private Random random = new Random();
+
+    @Override
+    public void determineAction() {
+        Vector p = (Vector) percept;
+
+        // Acessa os elementos do Vector percept por índice:
+        // p.elementAt(0) é "bump" (se houver colisão)
+        // p.elementAt(1) é "dirt" (se houver sujeira)
+        // p.elementAt(2) é "home" (se o agente estiver na posição inicial)
+
+        // Prioridade 1: Aspirar se houver sujeira no quadrado atual
+        if (p.elementAt(1) != null && p.elementAt(1).equals("dirt")) {
+            action = "suck";
+        }
+        // Prioridade 2: Reagir se o agente bateu em uma parede/obstáculo
+        else if (p.elementAt(0) != null && p.elementAt(0).equals("bump")) {
+            // Se bateu, vire aleatoriamente para a direita ou esquerda
+            // Isso ajuda a sair de cantos e corredores estreitos
+            if (random.nextBoolean()) {
+                action = "turn right";
+            } else {
+                action = "turn left";
+            }
+        }
+        // Prioridade 3: Se o agente está na posição "home" (pode ser um critério de parada ou comportamento específico)
+        else if (p.elementAt(2) != null && p.elementAt(2).equals("home")) {
+            // No agente dummy, ele desliga ou se move/gira aleatoriamente aqui.
+            // Para garantir que ele explore, podemos fazer ele continuar se movendo ou girando
+            // com uma pequena chance de desligar.
+            int choice = random.nextInt(3); // 0, 1 ou 2
+            switch (choice) {
+                case 0: action = "shut-off"; break; // Pode desligar
+                case 1: action = "forward"; break;
+                case 2: action = "turn left"; break;
+            }
+        }
+        // Prioridade 4: Comportamento padrão de exploração (se não há sujeira, batida ou "home")
+        else {
+            // Aqui, o agente dummy usa uma aleatoriedade maior para determinar a próxima ação.
+            // Isso ajuda a garantir que ele não fique preso em padrões lineares ou circulares.
+            int choice = random.nextInt(5); // 0, 1, 2, 3 ou 4
+            switch (choice) {
+                case 0:
+                case 1:
+                case 2: action = "forward"; break; // Mais chance de ir para frente
+                case 3: action = "turn right"; break;
+                case 4: action = "turn left"; break;
+            }
+        }
+    }
+}

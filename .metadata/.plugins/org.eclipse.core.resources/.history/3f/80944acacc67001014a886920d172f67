@@ -1,0 +1,24 @@
+package ai.worlds.vacuum;
+
+import java.util.*;
+
+class HilbertAgente1VacuumAgent extends VacuumAgent {
+    // Declare quaisquer variáveis de estado aqui, se necessário.
+    // Para um agente reativo simples, talvez não precise de estado complexo.
+
+    @Override
+    void determineAction() {
+        // A variável 'percept' (do tipo Vector) contém as informações do ambiente.
+        // Para o mundo do aspirador, ela geralmente indica se o local atual está "Dirty".
+        // A variável 'action' (do tipo String) é onde você define a próxima ação do agente.
+        // Ações possíveis: "suck", "forward", "turn left", "turn right", "shut-off"
+
+        if (percept.contains("Dirty")) {
+            action = "suck"; // Se vir sujeira, aspira.
+        } else {
+            // Se não houver sujeira, o agente tenta se mover.
+            // Esta é uma lógica muito básica; um agente mais sofisticado exploraria.
+            action = "forward";
+        }
+    }
+}

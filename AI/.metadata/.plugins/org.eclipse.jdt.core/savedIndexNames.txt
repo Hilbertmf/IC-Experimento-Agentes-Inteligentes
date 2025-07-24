@@ -1,0 +1,4 @@
+INDEX VERSION 1.134+/media/hilbert/77346199-c79e-4c5a-a5b0-53aa21409217/hilbert/workspace/IC/projeto1/AI/AI/.metadata/.plugins/org.eclipse.jdt.core
+707944383.index
+2958864389.index
+1865797976.index
