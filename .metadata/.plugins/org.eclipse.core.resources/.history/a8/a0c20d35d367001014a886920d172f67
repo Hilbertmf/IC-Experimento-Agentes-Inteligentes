@@ -1,0 +1,243 @@
+package ai.worlds.vacuum;
+
+import java.util.*;
+
+public class HilbertAgente2VacuumAgent extends VacuumAgent {
+
+    // --- VARIÁVEIS DE ESTADO INTERNO (O MODELO DO AMBIENTE) ---
+    // Representação do mapa: Usaremos um mapa de Localização para o estado do quadrado
+    // "U" = Unexplored (não explorado)
+    // "C" = Clean (limpo)
+    // "D" = Dirty (sujo)
+    // "W" = Wall (parede - o agente bateu aqui)
+    private Map<Location, String> knownMap;
+
+    // Posição e Orientação do Agente no seu modelo interno
+    private Location currentLocation;
+    private String currentOrientation; // "N", "E", "S", "W" (Norte, Leste, Sul, Oeste)
+
+    // Lista de locais sujos conhecidos para visitar
+    private Queue<Location> dirtyLocationsQueue;
+
+    // Para rastrear locais não explorados ou a serem visitados (ex: para busca BFS/DFS)
+    private Queue<Location> explorationQueue;
+
+    // --- CONSTRUTOR ---
+    public HilbertAgente2VacuumAgent() {
+        knownMap = new HashMap<>();
+        // Assumimos que o agente começa em (0,0) e virado para o Norte
+        currentLocation = new Location(0, 0);
+        currentOrientation = "N";
+        knownMap.put(currentLocation, "C"); // Inicia o quadrado atual como limpo (assumindo percepção inicial)
+
+        dirtyLocationsQueue = new LinkedList<>();
+        explorationQueue = new LinkedList<>();
+        // Adiciona um ponto inicial para exploração (se o mapa não for vazio)
+        explorationQueue.add(currentLocation);
+    }
+
+    @Override
+    public void determineAction() {
+        // --- 1. ATUALIZAR O MODELO INTERNO COM BASE NA PERCEPÇÃO ANTERIOR E AÇÃO ---
+        // Este é o passo mais crucial para um agente baseado em modelos.
+        // Ele usa a *percepção atual* (percept) e a *última ação executada* para inferir
+        // o que mudou no ambiente e no seu próprio estado.
+        updateModelBasedOnPerceptAndLastAction();
+
+
+        // --- 2. DECISÃO BASEADA NO MODELO ---
+        // A lógica de decisão é mais complexa:
+        // a) Se o local atual está sujo no meu modelo, aspirar.
+        // b) Se há sujeira conhecida no mapa, planejar caminho até ela.
+        // c) Se não há sujeira conhecida, explorar novas áreas.
+
+        // a) Prioridade: Limpar sujeira no local atual (se o modelo indicar sujeira)
+        if (knownMap.getOrDefault(currentLocation, "U").equals("D")) {
+            action = "suck";
+            return;
+        }
+
+        // b) Buscar sujeira conhecida ou explorar
+        // Para simplificar, vamos implementar uma estratégia de exploração e limpeza básica:
+        // Priorizar limpeza de sujeira conhecida, senão, explorar.
+
+        Location targetLocation = null;
+
+        // Tenta encontrar o próximo local sujo para ir
+        if (!dirtyLocationsQueue.isEmpty()) {
+            targetLocation = dirtyLocationsQueue.peek(); // Pega o próximo item sem remover
+            // Se o alvo já foi limpo por alguma razão, remove da fila e tenta o próximo
+            if (knownMap.getOrDefault(targetLocation, "U").equals("C")) {
+                dirtyLocationsQueue.poll();
+                targetLocation = null; // Tenta novamente na próxima iteração
+            }
+        }
+
+        // Se não encontrou sujeira conhecida, ou a fila de sujeira está vazia, explore
+        if (targetLocation == null && !explorationQueue.isEmpty()) {
+             targetLocation = explorationQueue.peek(); // Pega o próximo local a explorar
+             // Se o alvo já foi explorado, remove e tenta o próximo
+             if (knownMap.containsKey(targetLocation) && !knownMap.get(targetLocation).equals("U")) {
+                 explorationQueue.poll();
+                 targetLocation = null; // Tenta novamente
+             }
+        }
+
+        // Se tem um alvo (sujeira ou exploração), planeja a próxima ação para chegar lá
+        if (targetLocation != null && !targetLocation.equals(currentLocation)) {
+            // A parte mais difícil: Algoritmo de busca para encontrar o próximo passo
+            // Vamos implementar um "pseudo-planejamento" simples por enquanto
+            action = getNextActionToTarget(targetLocation);
+        } else {
+            // Se não há alvo claro (tudo limpo/explorado ou em um beco sem saída),
+            // podemos tentar uma virada aleatória ou "shut-off" se tudo estiver limpo.
+            if (random.nextBoolean()) { // Pequena chance de virar para desempate ou explorar
+                 action = "turn right";
+             } else {
+                 action = "turn left";
+             }
+        }
+        
+        // Se após tudo isso, o agente estiver no "home" e não houver mais sujeira conhecida/exploração
+        // ele pode se desligar. Esta lógica é para o final do projeto.
+        // if (p.elementAt(2) != null && p.elementAt(2).equals("home") && dirtyLocationsQueue.isEmpty() && explorationQueue.isEmpty()) {
+        //     action = "shut-off";
+        // }
+    }
+
+    // --- MÉTODOS AUXILIARES PARA ATUALIZAÇÃO E PLANEJAMENTO ---
+
+    private void updateModelBasedOnPerceptAndLastAction() {
+        // Este método é chamado ANTES da decisão da ação atual.
+        // Ele deve usar a 'percept' (percepção recém-recebida do ambiente)
+        // e a 'lastAction' (ação que o agente tentou no ciclo anterior)
+        // para atualizar 'currentLocation', 'currentOrientation' e 'knownMap'.
+
+        Vector currentPercept = (Vector) percept; // A percepção atual
+        String previousAction = this.action; // A ação que foi definida no ciclo anterior e executada
+
+        // 1. Atualizar o estado do quadrado atual com base na percepção de "dirt"
+        if (currentPercept.elementAt(1) != null && currentPercept.elementAt(1).equals("dirt")) {
+            knownMap.put(currentLocation, "D"); // Marcar como sujo
+            if (!dirtyLocationsQueue.contains(currentLocation)) {
+                dirtyLocationsQueue.add(currentLocation); // Adicionar à fila de sujeira
+            }
+        } else {
+            // Se não está sujo agora e a última ação não foi "suck",
+            // ou se foi "suck" e o quadrado ficou limpo, marque como limpo.
+            if (previousAction != null && previousAction.equals("suck")) {
+                knownMap.put(currentLocation, "C"); // Aspirou, então está limpo
+                dirtyLocationsQueue.remove(currentLocation); // Remove da fila de sujeira
+            } else if (!knownMap.getOrDefault(currentLocation, "U").equals("D")) {
+                 knownMap.put(currentLocation, "C"); // Se não estava sujo, está limpo
+            }
+        }
+
+        // 2. Atualizar posição e orientação com base na última ação e colisões
+        if (previousAction != null) {
+            if (previousAction.equals("forward")) {
+                if (currentPercept.elementAt(0) != null && currentPercept.elementAt(0).equals("bump")) {
+                    // Se bateu em algo, o local à frente na orientação atual é uma parede.
+                    Location wallLocation = getAdjacentLocation(currentLocation, currentOrientation);
+                    if (wallLocation != null) {
+                        knownMap.put(wallLocation, "W"); // Marcar como parede
+                    }
+                } else {
+                    // Se não bateu, o agente se moveu para frente.
+                    currentLocation = getAdjacentLocation(currentLocation, currentOrientation);
+                    if (currentLocation != null && !knownMap.containsKey(currentLocation)) {
+                        knownMap.put(currentLocation, "U"); // Marcar novo local como não explorado
+                        explorationQueue.add(currentLocation); // Adicionar para futura exploração
+                    }
+                }
+            } else if (previousAction.equals("turn right")) {
+                turn("right");
+            } else if (previousAction.equals("turn left")) {
+                turn("left");
+            }
+            // Ação "suck" não muda localização/orientação
+            // Ação "shut-off" encerra o agente
+        }
+    }
+
+    // Helper para obter a localização adjacente com base na orientação
+    private Location getAdjacentLocation(Location loc, String orientation) {
+        int x = loc.getX();
+        int y = loc.getY();
+        switch (orientation) {
+            case "N": return new Location(x, y - 1); // Em Y para cima é negativo
+            case "E": return new Location(x + 1, y);
+            case "S": return new Location(x, y + 1);
+            case "W": return new Location(x - 1, y);
+            default: return null;
+        }
+    }
+
+    // Helper para atualizar a orientação
+    private void turn(String direction) {
+        String[] orientations = {"N", "E", "S", "W"};
+        int currentIndex = -1;
+        for (int i = 0; i < orientations.length; i++) {
+            if (orientations[i].equals(currentOrientation)) {
+                currentIndex = i;
+                break;
+            }
+        }
+
+        if (currentIndex != -1) {
+            if (direction.equals("right")) {
+                currentOrientation = orientations[(currentIndex + 1) % 4];
+            } else if (direction.equals("left")) {
+                currentOrientation = orientations[(currentIndex - 1 + 4) % 4];
+            }
+        }
+    }
+
+    // Método de planejamento de caminho (precisa de um algoritmo de busca de verdade)
+    private String getNextActionToTarget(Location target) {
+        // Esta é uma implementação MUITO simplificada.
+        // Em um agente de modelo real, você usaria um algoritmo de busca (BFS/DFS/A*)
+        // para encontrar o caminho mais curto até o 'target' no 'knownMap'
+        // e então determinar a primeira ação nesse caminho.
+
+        // Para começar, vamos usar uma heurística simples:
+        // Se o alvo está na mesma coluna e acima, vire para Norte e vá para frente.
+        // Se o alvo está na mesma coluna e abaixo, vire para Sul e vá para frente.
+        // Se o alvo está na mesma linha e à direita, vire para Leste e vá para frente.
+        // Se o alvo está na mesma linha e à esquerda, vire para Oeste e vá para frente.
+        // Se não for tão direto, gire aleatoriamente até ficar alinhado.
+
+        int dx = target.getX() - currentLocation.getX();
+        int dy = target.getY() - currentLocation.getY();
+
+        // Tentar alinhar-se com o alvo (primeiro X, depois Y, ou vice-versa)
+        if (dx != 0) { // Precisa mover horizontalmente
+            if (dx > 0) { // Alvo à direita
+                if (currentOrientation.equals("E")) return "forward";
+                else if (currentOrientation.equals("N")) return "turn right";
+                else if (currentOrientation.equals("S")) return "turn left";
+                else return "turn right"; // Se estiver "W", vira direito duas vezes
+            } else { // Alvo à esquerda
+                if (currentOrientation.equals("W")) return "forward";
+                else if (currentOrientation.equals("N")) return "turn left";
+                else if (currentOrientation.equals("S")) return "turn right";
+                else return "turn left"; // Se estiver "E", vira esquerdo duas vezes
+            }
+        } else if (dy != 0) { // Precisa mover verticalmente
+            if (dy < 0) { // Alvo acima (Y diminui para cima no nosso sistema)
+                if (currentOrientation.equals("N")) return "forward";
+                else if (currentOrientation.equals("E")) return "turn left";
+                else if (currentOrientation.equals("W")) return "turn right";
+                else return "turn right"; // Se estiver "S", vira direito duas vezes
+            } else { // Alvo abaixo
+                if (currentOrientation.equals("S")) return "forward";
+                else if (currentOrientation.equals("E")) return "turn right";
+                else if (currentOrientation.equals("W")) return "turn left";
+                else return "turn left"; // Se estiver "N", vira esquerdo duas vezes
+            }
+        }
+
+        // Se o agente já está no target, isso não deveria ser chamado, mas como fallback
+        return "suck"; // Se está no target e ele está sujo (já tratado acima), aspira. Se não, é um erro de lógica.
+    }
+}

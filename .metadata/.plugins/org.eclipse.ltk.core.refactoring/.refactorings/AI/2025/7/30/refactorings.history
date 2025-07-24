@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Rename type &apos;ai.worlds.vacuum.HilbertAgenteReativoVacuumAgent&apos; to &apos;HilbertAgente1VacuumAgent&apos;&#x0A;- Original project: &apos;AI&apos;&#x0A;- Original element: &apos;ai.worlds.vacuum.HilbertAgenteReativoVacuumAgent&apos;&#x0A;- Renamed element: &apos;ai.worlds.vacuum.HilbertAgente1VacuumAgent&apos;&#x0A;- Update references to refactored element&#x0A;- Update textual occurrences in comments and strings" description="Rename type &apos;HilbertAgenteReativoVacuumAgent&apos;" flags="589830" id="org.eclipse.jdt.ui.rename.type" input="/src&lt;ai.worlds.vacuum{HilbertAgenteReativoVacuumAgent.java[HilbertAgenteReativoVacuumAgent" matchStrategy="1" name="HilbertAgente1VacuumAgent" qualified="false" references="true" similarDeclarations="false" stamp="1753278865080" textual="false" version="1.0"/>
+</session>

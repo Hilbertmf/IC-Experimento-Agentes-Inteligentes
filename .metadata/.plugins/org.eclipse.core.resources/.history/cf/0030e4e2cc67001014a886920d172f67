@@ -1,0 +1,20 @@
+package ai.worlds.vacuum;
+
+import java.util.Vector;
+
+public class HilbertAgente1VacuumAgent extends VacuumAgent {
+
+    @Override
+    public void determineAction() {
+        Vector p = (Vector) percept;
+
+        // Lógica do agente reativo simples
+        if (p.elementAt(1) != null && p.elementAt(1).equals("dirt")) {
+            action = "suck";
+        } else if (p.elementAt(0) != null && p.elementAt(0).equals("bump")) {
+            action = "turn right";
+        } else {
+            action = "forward";
+        }
+    }
+}

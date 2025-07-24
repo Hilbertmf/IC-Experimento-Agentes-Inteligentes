@@ -1,0 +1,205 @@
+package ai.worlds.vacuum;
+
+import java.util.*;
+import java.util.Random; // <-- GARANTA QUE ESTA LINHA ESTÁ PRESENTE
+
+public class HilbertAgenteModeloVacuumAgent extends VacuumAgent {
+
+    private Map<Location, String> knownMap;
+    private Location currentLocation;
+    private String currentOrientation; // "N", "E", "S", "W"
+    private Queue<Location> dirtyLocationsQueue;
+    private Queue<Location> explorationQueue;
+
+    private Random random; // <-- GARANTA QUE ESTA LINHA ESTÁ PRESENTE
+
+    public HilbertAgenteModeloVacuumAgent() {
+        knownMap = new HashMap<>();
+        // Assumimos que o agente começa em (0,0) e virado para o Norte
+        currentLocation = new Location(0, 0);
+        currentOrientation = "N";
+        knownMap.put(currentLocation, "C"); // Inicia o quadrado atual como limpo (assumindo percepção inicial)
+
+        dirtyLocationsQueue = new LinkedList<>();
+        explorationQueue = new LinkedList<>();
+        // Adiciona um ponto inicial para exploração (se o mapa não for vazio)
+        explorationQueue.add(currentLocation);
+
+        random = new Random(); // <-- GARANTA QUE ESTA LINHA ESTÁ PRESENTE NO CONSTRUTOR
+    }
+
+    @Override
+    public void determineAction() {
+        // --- 1. ATUALIZAR O MODELO INTERNO COM BASE NA PERCEPÇÃO ANTERIOR E AÇÃO ---
+        updateModelBasedOnPerceptAndLastAction();
+
+        Vector currentPercept = (Vector) percept; // A percepção atual, útil para decisões
+
+        // --- 2. DECISÃO BASEADA NO MODELO ---
+        // a) Prioridade: Limpar sujeira no local atual (se o modelo indicar sujeira)
+        if (knownMap.getOrDefault(currentLocation, "U").equals("D")) {
+            action = "suck";
+            return;
+        }
+
+        // b) Buscar sujeira conhecida ou explorar
+        Location targetLocation = null;
+
+        // Tenta encontrar o próximo local sujo para ir (no modelo)
+        if (!dirtyLocationsQueue.isEmpty()) {
+            targetLocation = dirtyLocationsQueue.peek(); // Pega o próximo item sem remover
+            // Se o alvo já foi limpo por alguma razão, remove da fila e tenta o próximo
+            if (knownMap.getOrDefault(targetLocation, "U").equals("C")) {
+                dirtyLocationsQueue.poll();
+                targetLocation = null; // Tenta novamente na próxima iteração
+            }
+        }
+
+        // Se não encontrou sujeira conhecida, ou a fila de sujeira está vazia, explore
+        if (targetLocation == null && !explorationQueue.isEmpty()) {
+             targetLocation = explorationQueue.peek(); // Pega o próximo local a explorar
+             // Se o alvo já foi explorado, remove e tenta o próximo
+             if (knownMap.containsKey(targetLocation) && !knownMap.get(targetLocation).equals("U")) {
+                 explorationQueue.poll();
+                 targetLocation = null; // Tenta novamente
+             }
+        }
+
+        // Se tem um alvo (sujeira ou exploração), planeja a próxima ação para chegar lá
+        if (targetLocation != null && !targetLocation.equals(currentLocation)) {
+            action = getNextActionToTarget(targetLocation);
+        } else {
+            // Se não há alvo claro (tudo limpo/explorado ou em um beco sem saída),
+            // podemos tentar uma virada aleatória para tentar "desbloquear"
+            // Linha 96 (provavelmente)
+            if (random.nextInt(2) == 0) { // <-- USAR random.nextInt()
+                 action = "turn right";
+             } else {
+                 action = "turn left";
+             }
+        }
+
+        // Lógica de desligamento: Se está em "home" e não há mais sujeira conhecida/exploração
+        if (currentPercept.elementAt(2) != null && currentPercept.elementAt(2).equals("home")) {
+            boolean allKnownClean = true;
+            for (String status : knownMap.values()) {
+                if (status.equals("D") || status.equals("U")) { // Se ainda há sujeira ou não explorado
+                    allKnownClean = false;
+                    break;
+                }
+            }
+            // Verifica se as filas de sujeira e exploração estão vazias
+            if (allKnownClean && dirtyLocationsQueue.isEmpty() && explorationQueue.isEmpty()) {
+                action = "shut-off";
+            }
+        }
+    }
+
+    // --- MÉTODOS AUXILIARES PARA ATUALIZAÇÃO E PLANEJAMENTO ---
+
+    private void updateModelBasedOnPerceptAndLastAction() {
+        Vector currentPercept = (Vector) percept;
+        String previousAction = this.action;
+
+        // Atualizar o estado do quadrado atual com base na percepção de "dirt"
+        if (currentPercept.elementAt(1) != null && currentPercept.elementAt(1).equals("dirt")) {
+            knownMap.put(currentLocation, "D");
+            if (!dirtyLocationsQueue.contains(currentLocation)) {
+                dirtyLocationsQueue.add(currentLocation);
+            }
+        } else {
+            if (previousAction != null && previousAction.equals("suck")) {
+                knownMap.put(currentLocation, "C");
+                dirtyLocationsQueue.remove(currentLocation);
+            } else if (!knownMap.getOrDefault(currentLocation, "U").equals("D")) {
+                 knownMap.put(currentLocation, "C");
+            }
+        }
+
+        // Atualizar posição e orientação com base na última ação e colisões
+        if (previousAction != null) {
+            if (previousAction.equals("forward")) {
+                if (currentPercept.elementAt(0) != null && currentPercept.elementAt(0).equals("bump")) {
+                    Location wallLocation = getAdjacentLocation(currentLocation, currentOrientation);
+                    if (wallLocation != null) {
+                        knownMap.put(wallLocation, "W");
+                    }
+                } else {
+                    currentLocation = getAdjacentLocation(currentLocation, currentOrientation);
+                    if (currentLocation != null && !knownMap.containsKey(currentLocation)) {
+                        knownMap.put(currentLocation, "U");
+                        explorationQueue.add(currentLocation);
+                    }
+                }
+            } else if (previousAction.equals("turn right")) {
+                turn("right");
+            } else if (previousAction.equals("left")) { // <-- GARANTA QUE ESTA LINHA ESTÁ CORRETA, era "turn left"
+                turn("left");
+            }
+        }
+    }
+
+    private Location getAdjacentLocation(Location loc, String orientation) {
+        int x = loc.getX();
+        int y = loc.getY();
+        switch (orientation) {
+            case "N": return new Location(x, y - 1);
+            case "E": return new Location(x + 1, y);
+            case "S": return new Location(x, y + 1);
+            case "W": return new Location(x - 1, y);
+            default: return null;
+        }
+    }
+
+    private void turn(String direction) {
+        String[] orientations = {"N", "E", "S", "W"};
+        int currentIndex = -1;
+        for (int i = 0; i < orientations.length; i++) {
+            if (orientations[i].equals(currentOrientation)) {
+                currentIndex = i;
+                break;
+            }
+        }
+
+        if (currentIndex != -1) {
+            if (direction.equals("right")) {
+                currentOrientation = orientations[(currentIndex + 1) % 4];
+            } else if (direction.equals("left")) {
+                // (currentIndex - 1 + 4) % 4 garante que o índice não seja negativo
+                currentOrientation = orientations[(currentIndex - 1 + 4) % 4];
+            }
+        }
+    }
+
+    private String getNextActionToTarget(Location target) {
+        int dx = target.getX() - currentLocation.getX();
+        int dy = target.getY() - currentLocation.getY();
+
+        if (dx != 0) {
+            if (dx > 0) { // Alvo à direita
+                if (currentOrientation.equals("E")) return "forward";
+                else if (currentOrientation.equals("N")) return "turn right";
+                else if (currentOrientation.equals("S")) return "turn left";
+                else return "turn right"; // Se estiver "W", vira direito duas vezes
+            } else { // Alvo à esquerda
+                if (currentOrientation.equals("W")) return "forward";
+                else if (currentOrientation.equals("N")) return "turn left";
+                else if (currentOrientation.equals("S")) return "turn right";
+                else return "turn left"; // Se estiver "E", vira esquerdo duas vezes
+            }
+        } else if (dy != 0) {
+            if (dy < 0) { // Alvo acima (Y diminui para cima)
+                if (currentOrientation.equals("N")) return "forward";
+                else if (currentOrientation.equals("E")) return "turn left";
+                else if (currentOrientation.equals("W")) return "turn right";
+                else return "turn right"; // Se estiver "S", vira direito duas vezes
+            } else { // Alvo abaixo
+                if (currentOrientation.equals("S")) return "forward";
+                else if (currentOrientation.equals("E")) return "turn right";
+                else if (currentOrientation.equals("W")) return "turn left";
+                else return "turn left"; // Se estiver "N", vira esquerdo duas vezes
+            }
+        }
+        return "suck"; // Fallback: se já no alvo e sujo, aspira (já tratado acima)
+    }
+}

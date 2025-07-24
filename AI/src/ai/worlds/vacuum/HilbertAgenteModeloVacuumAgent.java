@@ -1,0 +1,196 @@
+package ai.worlds.vacuum;
+
+import java.util.*;
+import java.util.Random;
+import ai.worlds.Location;
+
+public class HilbertAgenteModeloVacuumAgent extends VacuumAgent {
+
+    private Map<Location, String> knownMap;
+    private Location currentLocation;
+    private String currentOrientation; // "N", "E", "S", "W"
+    private Queue<Location> dirtyLocationsQueue;
+    private Queue<Location> explorationQueue;
+    private Random random;
+    private int moveCount;
+
+    public HilbertAgenteModeloVacuumAgent() {
+        knownMap = new HashMap<>();
+        currentLocation = new Location(0, 0);
+        currentOrientation = "N";
+        knownMap.put(currentLocation, "C");
+
+        dirtyLocationsQueue = new LinkedList<>();
+        explorationQueue = new LinkedList<>();
+        explorationQueue.add(currentLocation);
+
+        random = new Random();
+        moveCount = 0;
+    }
+
+    @Override
+    public void determineAction() {
+        updateModelBasedOnPerceptAndLastAction();
+
+        Vector currentPercept = (Vector) percept;
+
+        if (knownMap.getOrDefault(currentLocation, "U").equals("D")) {
+            action = "suck";
+            return;
+        }
+
+        Location targetLocation = null;
+
+        if (!dirtyLocationsQueue.isEmpty()) {
+            targetLocation = dirtyLocationsQueue.peek();
+            if (knownMap.getOrDefault(targetLocation, "U").equals("C")) {
+                dirtyLocationsQueue.poll();
+                targetLocation = null;
+            }
+        }
+
+        if (targetLocation == null && !explorationQueue.isEmpty()) {
+             targetLocation = explorationQueue.peek();
+             if (knownMap.containsKey(targetLocation) && !knownMap.get(targetLocation).equals("U")) {
+                 explorationQueue.poll();
+                 targetLocation = null;
+             }
+        }
+
+        if (targetLocation != null && !targetLocation.equals(currentLocation)) {
+            action = getNextActionToTarget(targetLocation);
+            if (action.equals("forward") || action.equals("turn right") || action.equals("turn left")) {
+                moveCount++;
+            }
+        } else {
+            if (random.nextInt(2) == 0) {
+                 action = "turn right";
+             } else {
+                 action = "turn left";
+             }
+            moveCount++;
+        }
+
+        if (currentPercept.elementAt(2) != null && currentPercept.elementAt(2).equals("home")) {
+            boolean allKnownClean = true;
+            for (String status : knownMap.values()) {
+                if (status.equals("D") || status.equals("U")) {
+                    allKnownClean = false;
+                    break;
+                }
+            }
+            if (allKnownClean && dirtyLocationsQueue.isEmpty() && explorationQueue.isEmpty()) {
+                action = "shut-off";
+            }
+        }
+    }
+
+    private void updateModelBasedOnPerceptAndLastAction() {
+        Vector currentPercept = (Vector) percept;
+        String previousAction = this.action;
+
+        if (currentPercept.elementAt(1) != null && currentPercept.elementAt(1).equals("dirt")) {
+            knownMap.put(currentLocation, "D");
+            if (!dirtyLocationsQueue.contains(currentLocation)) {
+                dirtyLocationsQueue.add(currentLocation);
+            }
+        } else {
+            if (previousAction != null && previousAction.equals("suck")) {
+                knownMap.put(currentLocation, "C");
+                dirtyLocationsQueue.remove(currentLocation);
+            } else if (!knownMap.getOrDefault(currentLocation, "U").equals("D")) {
+                 knownMap.put(currentLocation, "C");
+            }
+        }
+
+        if (previousAction != null) {
+            if (previousAction.equals("forward")) {
+                if (currentPercept.elementAt(0) != null && currentPercept.elementAt(0).equals("bump")) {
+                    Location wallLocation = getAdjacentLocation(currentLocation, currentOrientation);
+                    if (wallLocation != null) {
+                        knownMap.put(wallLocation, "W");
+                    }
+                } else {
+                    currentLocation = getAdjacentLocation(currentLocation, currentOrientation);
+                    if (currentLocation != null && !knownMap.containsKey(currentLocation)) {
+                        knownMap.put(currentLocation, "U");
+                        explorationQueue.add(currentLocation);
+                    }
+                }
+            } else if (previousAction.equals("turn right")) {
+                turn("right");
+            } else if (previousAction.equals("turn left")) {
+                turn("left");
+            }
+        }
+    }
+
+    private Location getAdjacentLocation(Location loc, String orientation) {
+        // Correção aqui: Acessar .x e .y diretamente
+        int x = loc.x;
+        int y = loc.y;
+        switch (orientation) {
+            case "N": return new Location(x, y - 1);
+            case "E": return new Location(x + 1, y);
+            case "S": return new Location(x, y + 1);
+            case "W": return new Location(x - 1, y);
+            default: return null;
+        }
+    }
+
+    private void turn(String direction) {
+        String[] orientations = {"N", "E", "S", "W"};
+        int currentIndex = -1;
+        for (int i = 0; i < orientations.length; i++) {
+            if (orientations[i].equals(currentOrientation)) {
+                currentIndex = i;
+                break;
+            }
+        }
+
+        if (currentIndex != -1) {
+            if (direction.equals("right")) {
+                currentOrientation = orientations[(currentIndex + 1) % 4];
+            } else if (direction.equals("left")) {
+                currentOrientation = orientations[(currentIndex - 1 + 4) % 4];
+            }
+        }
+    }
+
+    private String getNextActionToTarget(Location target) {
+        // Correção aqui: Acessar .x e .y diretamente
+        int dx = target.x - currentLocation.x;
+        int dy = target.y - currentLocation.y;
+
+        if (dx != 0) {
+            if (dx > 0) {
+                if (currentOrientation.equals("E")) return "forward";
+                else if (currentOrientation.equals("N")) return "turn right";
+                else if (currentOrientation.equals("S")) return "turn left";
+                else return "turn right";
+            } else {
+                if (currentOrientation.equals("W")) return "forward";
+                else if (currentOrientation.equals("N")) return "turn left";
+                else if (currentOrientation.equals("S")) return "turn right";
+                else return "turn left";
+            }
+        } else if (dy != 0) {
+            if (dy < 0) {
+                if (currentOrientation.equals("N")) return "forward";
+                else if (currentOrientation.equals("E")) return "turn left";
+                else if (currentOrientation.equals("W")) return "turn right";
+                else return "turn right";
+            } else {
+                if (currentOrientation.equals("S")) return "forward";
+                else if (currentOrientation.equals("E")) return "turn right";
+                else if (currentOrientation.equals("W")) return "turn left";
+                else return "turn left";
+            }
+        }
+        return "suck";
+    }
+    
+    public int getMoveCount() {
+        return moveCount;
+    }
+}
