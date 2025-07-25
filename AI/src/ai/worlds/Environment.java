@@ -20,7 +20,7 @@ public abstract class Environment implements Runnable
 	/**
 	 * The maximum number of steps.
 	 */
-	public int maxSteps = 30;	    
+	public int maxSteps = 50;
 	/**
 	 * Flag to indicate whether to display
 	 */
@@ -76,8 +76,13 @@ public abstract class Environment implements Runnable
 	 */	
 	public void run()
 	{
-		Simulator mySim = new Simulator();
-		mySim.start();
+		displayEnv();
+		while (step < maxSteps && !termination()) {
+	        takeStep();
+	    }
+		
+//		Simulator mySim = new Simulator();
+//		mySim.start();
 	}
 	
 	/**
@@ -135,12 +140,12 @@ public abstract class Environment implements Runnable
 		    agents[i].takeAction(this);
 	    }
 	}
-	protected class Simulator extends Thread {
-		public void run() {
-			displayEnv();
-			while (step < maxSteps && !termination()) {
-				takeStep();
-			}
-		}
-	}
+//	protected class Simulator extends Thread {
+//		public void run() {
+//			displayEnv();
+//			while (step < maxSteps && !termination()) {
+//				takeStep();
+//			}
+//		}
+//	}
 }

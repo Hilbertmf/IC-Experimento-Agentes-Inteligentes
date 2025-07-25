@@ -3,7 +3,7 @@ package ai.worlds.vacuum;
 import java.util.Vector;
 import java.util.Random;
 
-public class HilbertAgente1VacuumAgent extends VacuumAgent {
+public class HilbertAgenteReativoVacuumAgent extends VacuumAgent {
 
     private Random random = new Random();
 
@@ -11,7 +11,7 @@ public class HilbertAgente1VacuumAgent extends VacuumAgent {
     private int cleanedSquaresCount;
     private int moveCount;
 
-    public HilbertAgente1VacuumAgent() {
+    public HilbertAgenteReativoVacuumAgent() {
         cleanedSquaresCount = 0;
         moveCount = 0;
     }
@@ -23,10 +23,6 @@ public class HilbertAgente1VacuumAgent extends VacuumAgent {
         // Prioridade 1: Aspirar se houver sujeira no quadrado atual
         if (p.elementAt(1) != null && p.elementAt(1).equals("dirt")) {
             action = "suck";
-            // O simulador já conta os quadrados limpos.
-            // Se você precisar de um contador interno para a Medida 2,
-            // pode incrementar aqui, mas o simulador já faz isso no score padrão.
-            // cleanedSquaresCount++; // Descomente se precisar contar internamente
         }
         // Prioridade 2: Reagir se o agente bateu em uma parede/obstáculo
         else if (p.elementAt(0) != null && p.elementAt(0).equals("bump")) {
@@ -36,10 +32,9 @@ public class HilbertAgente1VacuumAgent extends VacuumAgent {
             } else {
                 action = "turn left";
             }
-            moveCount++; // Conta o movimento de giro
+            moveCount++;
         }
         // Prioridade 3: Comportamento padrão de exploração (se não há sujeira nem batida)
-        // O agente não vai mais parar aleatoriamente.
         // Ele vai sempre tentar ir para frente ou girar para explorar.
         else {
             // Mais chance de ir para frente para cobrir mais terreno,
@@ -50,14 +45,10 @@ public class HilbertAgente1VacuumAgent extends VacuumAgent {
                 case 1:
                 case 2: action = "forward"; break; // Maior chance de ir para frente
                 case 3: action = "turn right"; break; // Chance de virar (pode ser left também)
-                // Não adicionamos "turn left" explicitamente aqui para simplificar,
-                // mas a aleatoriedade em "bump" já ajuda a diversificar.
             }
-            moveCount++; // Conta o movimento de avanço ou giro
+            moveCount++;
         }
 
-        // Se o agente estiver na posição "home", ele simplesmente continua explorando
-        // a menos que não haja mais passos. A lógica de "shut-off" é removida.
     }
 
     public int getMoveCount() {

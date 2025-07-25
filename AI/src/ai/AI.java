@@ -35,6 +35,7 @@ public class AI
 	});
 	f.getContentPane().setLayout(new BorderLayout());
 	f.getContentPane().add(new AIPanel(f) , BorderLayout.NORTH);
+	f.setExtendedState(JFrame.MAXIMIZED_BOTH);
 	f.setVisible(true); 
     }
 }
