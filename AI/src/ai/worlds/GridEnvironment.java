@@ -117,15 +117,34 @@ public abstract class GridEnvironment extends Environment implements Cloneable
 		body.grabbed = false;
 		Location loc = body.loc;
 		Vector v = (Vector)grid[loc.x][loc.y];
+//		MODIFICAÇÃO:
+		System.out.println("DEBUG: GridEnvironment.grab() chamado para agente em (" + loc.x + "," + loc.y + ").");
+	    boolean dirtFound = false; // Adicionar um flag para depuração
+//		MODIFICAÇÃO:
 		for(int i=0; i<v.size(); i++) {
-			Obj o = (Obj)v.elementAt(i); 
-			if (!(o instanceof Wall) &&
-			    !(o instanceof AgentBody)) {
-				body.container.addElement(o);
-				v.removeElement(o);
-				body.grabbed = true;
+			Obj o = (Obj)v.elementAt(i);
+//			MODIFICAÇÃO:
+			if (o instanceof Dirt) { // Focar na sujeira
+	            System.out.println("DEBUG: Sujeira encontrada em (" + loc.x + "," + loc.y + ").");
+	            body.container.addElement(o); // Adiciona a sujeira ao container do corpo do agente
+	            v.removeElement(o); // Remove a sujeira do grid
+	            body.grabbed = true;
+	            dirtFound = true;
+	            System.out.println("DEBUG: Sujeira removida do grid e adicionada ao container. Container size: " + body.container.size());
+	            break; // Se só pode pegar um item por vez
 			}
+//			MODIFICAÇÃO:
+//			if (!(o instanceof Wall) &&
+//			    !(o instanceof AgentBody)) {
+//				body.container.addElement(o);
+//				v.removeElement(o);
+//				body.grabbed = true;
+//			}
 		}
+		
+		if (!dirtFound) {
+	        System.out.println("DEBUG: Nenhuma sujeira encontrada para agarrar em (" + loc.x + "," + loc.y + ").");
+	    }
 	}
 
 	/**

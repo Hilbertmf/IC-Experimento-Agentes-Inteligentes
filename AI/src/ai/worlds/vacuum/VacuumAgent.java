@@ -27,6 +27,7 @@ public abstract class VacuumAgent extends Agent
 	 */
     void suck(VacuumWorld vw)
     {
+        System.out.println("DEBUG: VacuumAgent.suck() chamado. Chamando vw.grab(body).");
     	vw.grab(body);
     }
     
