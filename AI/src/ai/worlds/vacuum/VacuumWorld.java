@@ -13,8 +13,7 @@ public class VacuumWorld extends GridEnvironment
 {
     public VacuumWorld(Agent[] a, int xsize, int ysize, double probDirt, JFrame f) {
     	super(a,xsize,ysize, f);
-//    	fillGrid(probDirt,(new Dirt()).getClass());
-    	fillGrid(0.9,(new Dirt()).getClass());
+    	fillGrid(probDirt,(new Dirt()).getClass());
     }
     
     /**

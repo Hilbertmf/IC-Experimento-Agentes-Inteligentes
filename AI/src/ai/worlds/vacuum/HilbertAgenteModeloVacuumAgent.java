@@ -187,7 +187,7 @@ public class HilbertAgenteModeloVacuumAgent extends VacuumAgent {
                 return currentOrientation.equals("S") ? "forward" : (currentOrientation.equals("E") ? "turn right" : "turn left");
             }
         }
-        return "suck"; // Deve sugar se já estiver no alvo sujo, mas isso é tratado antes
+        return "suck"; // Deve sugar se já estiver no alvo sujo
     }
 
     public int getMoveCount() {

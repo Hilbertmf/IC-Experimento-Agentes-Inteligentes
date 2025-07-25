@@ -617,7 +617,7 @@ public class WorldCreatePanel extends JPanel implements ActionListener, ItemList
                     double avgJillZ = (double) totalScoresJillZ.get(agentName) / num_trials;
                     
                     results.append("Agente: " + agentName + "\n");
-                    results.append(String.format("  Média Jill Zimmerman (Padrão): %.2f\n", avgJillZ));
+//                    results.append(String.format("  Média Jill Zimmerman (Padrão): %.2f\n", avgJillZ));
                     
                     if (envs.getSelectedItem().equals("Vacuum World")) {
                         double avgProp1 = (double) totalScoresProposed1.get(agentName) / num_trials;
@@ -626,6 +626,7 @@ public class WorldCreatePanel extends JPanel implements ActionListener, ItemList
                         results.append(String.format("  Média Score Proposto 1 (Limpeza): %.2f\n", avgProp1));
                         results.append(String.format("  Média Score Proposto 2 (Limpeza - Movimentos): %.2f\n", avgProp2));
                         results.append(String.format("  Média Movimentos: %.2f\n", avgMoveCounts));
+//                        results.append(String.format("  Média de celulas limpas(Limpeza): %.2f\n", avgProp1));
                     }
                     results.append("\n");
                 } else {
