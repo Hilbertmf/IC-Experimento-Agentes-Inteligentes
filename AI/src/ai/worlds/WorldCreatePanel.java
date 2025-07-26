@@ -451,9 +451,7 @@ public class WorldCreatePanel extends JPanel implements ActionListener, ItemList
     }
 
     private class TrialSet extends Thread {
-        private Map<String, Integer> totalScoresJillZ = new HashMap<>();
         private Map<String, Integer> totalScoresProposed1 = new HashMap<>();
-        private Map<String, Integer> totalScoresProposed2 = new HashMap<>();
         private Map<String, Integer> totalMoveCounts = new HashMap<>();
 
 
@@ -476,9 +474,7 @@ public class WorldCreatePanel extends JPanel implements ActionListener, ItemList
             // Inicializa os totais para cada agente
             for (Object agtObj : agts) {
                 String agentName = (String) agtObj;
-                totalScoresJillZ.put(agentName, 0);
                 totalScoresProposed1.put(agentName, 0);
-                totalScoresProposed2.put(agentName, 0);
                 totalMoveCounts.put(agentName, 0);
                 System.out.println("DEBUG (TrialSet.run): Inicializando mapas de scores para o agente: " + agentName); // Novo DEBUG
             }
@@ -547,29 +543,17 @@ public class WorldCreatePanel extends JPanel implements ActionListener, ItemList
     	                // Não precisamos chamar os métodos performanceMeasure novamente aqui.
     	                // Apenas pegamos os valores finais que estão nos campos do currentAgent.
 
-    	                int scoreJillZ = currentAgent.score;
-    	                int scoreProp1 = currentAgent.scoreProposed1;
-    	                int scoreProp2 = currentAgent.scoreProposed2;
+    	                int scoreProp1 = worldForAgent.performanceMeasure(currentAgent);
     	                int agentMoveCount = currentAgent.getMoveCount();
 
-    	                System.out.println("DEBUG (TrialSet.run): TESTANDO OS SCORES PARA " + agentName + " APÓS RUN: JillZ=" + scoreJillZ + " | Prop1=" + scoreProp1 + " | Prop2=" + scoreProp2 + " | Movimentos=" + agentMoveCount); // DEBUG ATUALIZADO E MAIS ESPECÍFICO
+    	                System.out.println("DEBUG (TrialSet.run): TESTANDO OS SCORES " + agentName + " PRA Prop=" + scoreProp1 + " | Movimentos=" + agentMoveCount); // DEBUG ATUALIZADO E MAIS ESPECÍFICO
 
-    	                // Acumula os scores para a média final
-    	                System.out.println(">>>> TESTE <<< ");
-    	                System.out.println("scoreJillZ: " + scoreJillZ);
-    	                System.out.println("totalScoreJillZ atual: " + totalScoresJillZ.get(agentName));
-    	                totalScoresJillZ.put(agentName, totalScoresJillZ.get(agentName) + scoreJillZ);
-    	                System.out.println(">>>> TESTE <<< ");
     	                totalScoresProposed1.put(agentName, totalScoresProposed1.get(agentName) + scoreProp1);
-    	                totalScoresProposed2.put(agentName, totalScoresProposed2.get(agentName) + scoreProp2);
     	                totalMoveCounts.put(agentName, totalMoveCounts.get(agentName) + agentMoveCount);
-                        System.out.println("DEBUG (TrialSet.run): Scores acumulados para VacuumWorld (Total Parcial): " + agentName + " - JillZ: " + totalScoresJillZ.get(agentName) + ", Prop1: " + totalScoresProposed1.get(agentName) + ", Prop2: " + totalScoresProposed2.get(agentName) + ", Mov: " + totalMoveCounts.get(agentName)); // NOVO DEBUG PARA TOTAL PARCIAL
+                        System.out.println("DEBUG (TrialSet.run): Scores acumulados para VacuumWorld (Total Parcial): " + agentName + ", score: " + totalScoresProposed1.get(agentName) + ", Mov: " + totalMoveCounts.get(agentName)); // NOVO DEBUG PARA TOTAL PARCIAL
 
                     } else { // Se for WumpusWorld, adicione pelo menos o score padrão
-                        totalScoresJillZ.put(agentName, totalScoresJillZ.get(agentName) + currentAgent.score);
-                        System.out.println("DEBUG (TrialSet.run): Scores acumulados para WumpusWorld (Total Parcial): " + agentName + " - JillZ: " + totalScoresJillZ.get(agentName));
-                        // Para Wumpus World, geralmente não temos "limpeza" ou métricas propostas da mesma forma,
-                        // então não acumulamos Proposed1/2 ou MoveCounts a menos que você as adicione ao WumpusWorld/Agent
+                       
                     }
     			}
                 System.out.println("DEBUG (TrialSet.run): <<< FIM da Rodada " + (j + 1) + " >>>"); // Atualizado
@@ -583,19 +567,15 @@ public class WorldCreatePanel extends JPanel implements ActionListener, ItemList
                 System.out.println("DEBUG (TrialSet.run): Processando agente para impressão final: " + agentName); // Novo DEBUG
                 
                 // Usar containsKey para verificar se o agente tem dados acumulados (pode ser Wumpus ou Vacuum)
-                if (totalScoresJillZ.containsKey(agentName)) {
-                    double avgJillZ = (double) totalScoresJillZ.get(agentName) / num_trials;
+                if (totalScoresProposed1.containsKey(agentName)) {
                     
                     System.out.println(String.format("Agente: %s", agentName));
-                    System.out.println(String.format("  Média Jill Zimmerman (Padrão): %.2f", avgJillZ));
 
                     // Imprimir scores propostos e movimentos apenas se for Vacuum World, onde eles são aplicáveis
                     if (envs.getSelectedItem().equals("Vacuum World")) {
                          double avgProp1 = (double) totalScoresProposed1.get(agentName) / num_trials;
-                         double avgProp2 = (double) totalScoresProposed2.get(agentName) / num_trials;
                          double avgMoveCounts = (double) totalMoveCounts.get(agentName) / num_trials;
-                         System.out.println(String.format("  Média Score Proposto 1 (Limpeza): %.2f", avgProp1));
-                         System.out.println(String.format("  Média Score Proposto 2 (Limpeza - Movimentos): %.2f", avgProp2));
+                         System.out.println(String.format("  Média Score Proposto 1 (Limpeza - Movimentos): %.2f", avgProp1));
                          System.out.println(String.format("  Média Movimentos: %.2f", avgMoveCounts));
                     }
                     System.out.println("------------------------------------");
@@ -613,18 +593,14 @@ public class WorldCreatePanel extends JPanel implements ActionListener, ItemList
             results.setText("--- Resultados Médios dos Testes (" + num_trials + " Rodadas) ---\n\n");
             for (Object agtObj : agts) {
                 String agentName = (String) agtObj;
-                if (totalScoresJillZ.containsKey(agentName)) {
-                    double avgJillZ = (double) totalScoresJillZ.get(agentName) / num_trials;
+                if (totalScoresProposed1.containsKey(agentName)) {
                     
                     results.append("Agente: " + agentName + "\n");
-//                    results.append(String.format("  Média Jill Zimmerman (Padrão): %.2f\n", avgJillZ));
                     
                     if (envs.getSelectedItem().equals("Vacuum World")) {
                         double avgProp1 = (double) totalScoresProposed1.get(agentName) / num_trials;
-                        double avgProp2 = (double) totalScoresProposed2.get(agentName) / num_trials;
                         double avgMoveCounts = (double) totalMoveCounts.get(agentName) / num_trials;
-                        results.append(String.format("  Média Score Proposto 1 (Limpeza): %.2f\n", avgProp1));
-                        results.append(String.format("  Média Score Proposto 2 (Limpeza - Movimentos): %.2f\n", avgProp2));
+                        results.append(String.format("  Média Score Proposto 1 (Limpeza - Movimentos): %.2f\n", avgProp1));
                         results.append(String.format("  Média Movimentos: %.2f\n", avgMoveCounts));
 //                        results.append(String.format("  Média de celulas limpas(Limpeza): %.2f\n", avgProp1));
                     }

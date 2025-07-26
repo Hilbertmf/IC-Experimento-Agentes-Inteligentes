@@ -16,8 +16,6 @@ public abstract class Agent
 	* The current score
 	*/
 	public  int score;
-	public  int scoreProposed1;
-	public  int scoreProposed2;
 	protected int moveCount;
 	/**
 	* The current percept
@@ -33,8 +31,6 @@ public abstract class Agent
 	{
 		body = new AgentBody();
 		score = 0;
-		scoreProposed1 = 0;
-		scoreProposed2 = 0;
 		moveCount = 0;
 	}
 

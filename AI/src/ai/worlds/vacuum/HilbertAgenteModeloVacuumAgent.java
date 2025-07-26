@@ -5,134 +5,112 @@ import ai.worlds.Location;
 
 public class HilbertAgenteModeloVacuumAgent extends VacuumAgent {
 
-    private Map<Location, String> knownMap; // "C":Clean, "D":Dirty, "W":Wall, "U":Unknown
-    private Location currentLocation;
-    private String currentOrientation; // "N", "E", "S", "W"
-    private Queue<Location> dirtyLocationsQueue; // Locais sujos conhecidos
-    private Queue<Location> explorationQueue; // Locais desconhecidos para explorar
+    // --- Estado interno e memória do agente ---
+    private Map<Location, String> knownMap;            // Mapa interno: "C"=clean, "D"=dirty, "W"=wall, "U"=unknown
+    private Location currentLocation;                   // Posição atual do agente no grid
+    private String currentOrientation;                  // Orientação atual: "N", "E", "S", "W"
+    private Queue<Location> dirtyLocationsQueue;        // Filas de posições sujas conhecidas
     private Random random;
-    private int moveCount; // Contador de movimentos para score
+    private int moveCount;
 
     public HilbertAgenteModeloVacuumAgent() {
-//    	Modelo do Ambiente
-    	knownMap = new HashMap<>();
-//    	Estado interno
+        knownMap = new HashMap<>();
         currentLocation = new Location(0, 0);
         currentOrientation = "N";
         knownMap.put(currentLocation, "C");
-
-//        Começa a explorar do local inicial
         dirtyLocationsQueue = new LinkedList<>();
-        explorationQueue = new LinkedList<>();
-        explorationQueue.add(currentLocation);
-
         random = new Random();
         moveCount = 0;
     }
 
-//    processo de decisão
     @Override
     public void determineAction() {
-//    	Atualização do Modelo
-    	updateModelBasedOnPerceptAndLastAction();
+        // --- Atualização do modelo com base no percepto e última ação ---
+        updateModelBasedOnPerceptAndLastAction();
 
-        Vector currentPercept = (Vector) percept;
-
-        // Prioridade 1: Aspirar se o local atual tem sujeira
+        // --- Tomada de decisão baseada no modelo interno ---
+        // Limpar se a posição atual está suja
         if (knownMap.getOrDefault(currentLocation, "U").equals("D")) {
             action = "suck";
             return;
         }
 
-        Location targetLocation = null;
-
-        // Prioridade 2: Ir para um local sujo conhecido
+        // Priorizar sujeira conhecida
+        Location target = null;
         while (!dirtyLocationsQueue.isEmpty()) {
-            Location potentialDirty = dirtyLocationsQueue.peek();
-            // Se o local na fila já foi limpo, remove e tenta o próximo
-            if (knownMap.getOrDefault(potentialDirty, "U").equals("C")) {
+            Location peek = dirtyLocationsQueue.peek();
+            if (!knownMap.getOrDefault(peek, "U").equals("D")) {
                 dirtyLocationsQueue.poll();
             } else {
-                targetLocation = potentialDirty;
+                target = peek;
                 break;
             }
         }
 
-        // Prioridade 3: Se não há sujeira, explorar um local desconhecido
-        if (targetLocation == null) {
-            while (!explorationQueue.isEmpty()) {
-                Location potentialUnknown = explorationQueue.peek();
-                // Se o local já é conhecido e não é "U", remove e tenta o próximo
-                if (knownMap.containsKey(potentialUnknown) && !knownMap.get(potentialUnknown).equals("U")) {
-                    explorationQueue.poll();
-                } else {
-                    targetLocation = potentialUnknown;
-                    break;
-                }
+        // Se não há sujeira, explorar células desconhecidas
+        if (target == null) {
+            target = findNearestUnknown();
+        }
+
+        // Desliga se não houver mais nada para fazer
+        if (target == null) {
+            action = "shut-off";
+            return;
+        }
+
+        // Planeja caminho para o alvo
+        List<Location> path = bfsPath(currentLocation, target);
+
+        if (path != null && path.size() > 1) {
+            Location nextStep = path.get(1);
+            action = determineTurnOrForward(nextStep);
+        } else {
+            // Caso sem caminho, gira para tentar se desbloquear
+            if (random.nextBoolean()) {
+                action = "turn left";
+            } else {
+                action = "turn right";
             }
         }
 
-        // Prioridade 4: Mover em direção ao alvo ou explorar aleatoriamente se não houver alvo válido
-        if (targetLocation != null && !targetLocation.equals(currentLocation)) {
-            action = getNextActionToTarget(targetLocation);
-            // Conta apenas movimentos que alteram a posição ou orientação
-            if (action.equals("forward") || action.equals("turn right") || action.equals("turn left")) {
-                moveCount++;
-            }
-        } else { // Se não há alvo ou já no alvo (e não sujo), gira aleatoriamente para tentar descobrir algo
-            action = random.nextBoolean() ? "turn right" : "turn left";
-            moveCount++; // Conta o giro aleatório
-        }
-
-        // Condição para desligar (shut-off)
-        // Se a percepção indica "home", e todo o mapa conhecido está limpo e explorado
-        if (currentPercept.elementAt(2) != null && currentPercept.elementAt(2).equals("home")) {
-            boolean allKnownClean = true;
-            for (String status : knownMap.values()) {
-                if (status.equals("D") || status.equals("U")) { // Ainda há sujeira ou locais desconhecidos
-                    allKnownClean = false;
-                    break;
-                }
-            }
-            if (allKnownClean && dirtyLocationsQueue.isEmpty() && explorationQueue.isEmpty()) {
-                action = "shut-off";
-            }
+        if (action.equals("forward") || action.equals("turn right") || action.equals("turn left")) {
+            moveCount++;
         }
     }
 
+    // Atualiza estado interno com base no percepto e última ação tomada
     private void updateModelBasedOnPerceptAndLastAction() {
         Vector currentPercept = (Vector) percept;
         String previousAction = this.action;
 
-        // Atualiza o status do local atual
         if (currentPercept.elementAt(1) != null && currentPercept.elementAt(1).equals("dirt")) {
             knownMap.put(currentLocation, "D");
-            if (!dirtyLocationsQueue.contains(currentLocation)) { // Evita duplicatas
+            if (!dirtyLocationsQueue.contains(currentLocation)) {
                 dirtyLocationsQueue.add(currentLocation);
             }
         } else {
             if (previousAction != null && previousAction.equals("suck")) {
                 knownMap.put(currentLocation, "C");
-                dirtyLocationsQueue.remove(currentLocation); // Remove da fila de sujos após aspirar
+                dirtyLocationsQueue.remove(currentLocation);
             } else if (!knownMap.getOrDefault(currentLocation, "U").equals("D")) {
-                 knownMap.put(currentLocation, "C"); // Se não tem sujeira e não era D, marca como C
+                knownMap.put(currentLocation, "C");
             }
         }
 
-        // Atualiza a posição e orientação com base na ação anterior e percepção
         if (previousAction != null) {
             if (previousAction.equals("forward")) {
                 if (currentPercept.elementAt(0) != null && currentPercept.elementAt(0).equals("bump")) {
                     Location wallLocation = getAdjacentLocation(currentLocation, currentOrientation);
                     if (wallLocation != null) {
-                        knownMap.put(wallLocation, "W"); // Marca parede
+                        knownMap.put(wallLocation, "W");
                     }
-                } else { // Avanço bem-sucedido
-                    currentLocation = getAdjacentLocation(currentLocation, currentOrientation);
-                    // Adiciona novo local ao mapa e à fila de exploração se desconhecido
-                    if (currentLocation != null && !knownMap.containsKey(currentLocation)) {
-                        knownMap.put(currentLocation, "U");
-                        explorationQueue.add(currentLocation);
+                } else {
+                    Location newLocation = getAdjacentLocation(currentLocation, currentOrientation);
+                    if (newLocation != null) {
+                        currentLocation = newLocation;
+                        if (!knownMap.containsKey(currentLocation)) {
+                            knownMap.put(currentLocation, "U");
+                        }
                     }
                 }
             } else if (previousAction.equals("turn right")) {
@@ -143,7 +121,7 @@ public class HilbertAgenteModeloVacuumAgent extends VacuumAgent {
         }
     }
 
-    // Calcula localização adjacente com base na orientação
+    // Auxiliares para movimentação e orientação
     private Location getAdjacentLocation(Location loc, String orientation) {
         int x = loc.x;
         int y = loc.y;
@@ -156,38 +134,114 @@ public class HilbertAgenteModeloVacuumAgent extends VacuumAgent {
         }
     }
 
-    // Atualiza a orientação do agente
     private void turn(String direction) {
         String[] orientations = {"N", "E", "S", "W"};
-        int currentIndex = Arrays.asList(orientations).indexOf(currentOrientation);
-
-        if (direction.equals("right")) {
-            currentOrientation = orientations[(currentIndex + 1) % 4];
-        } else if (direction.equals("left")) {
-            currentOrientation = orientations[(currentIndex - 1 + 4) % 4];
+        int currentIndex = -1;
+        for (int i = 0; i < orientations.length; i++) {
+            if (orientations[i].equals(currentOrientation)) {
+                currentIndex = i;
+                break;
+            }
+        }
+        if (currentIndex != -1) {
+            if (direction.equals("right")) {
+                currentOrientation = orientations[(currentIndex + 1) % 4];
+            } else if (direction.equals("left")) {
+                currentOrientation = orientations[(currentIndex - 1 + 4) % 4];
+            }
         }
     }
 
-    // Determina a ação para chegar ao alvo
-    private String getNextActionToTarget(Location target) {
-        int dx = target.x - currentLocation.x;
-        int dy = target.y - currentLocation.y;
+    private String turnRight(String ori) {
+        String[] orientations = {"N", "E", "S", "W"};
+        int i = Arrays.asList(orientations).indexOf(ori);
+        return orientations[(i + 1) % 4];
+    }
 
-        // Prioriza movimentos ao longo do eixo X se houver diferença
-        if (dx != 0) {
-            if (dx > 0) { // Alvo à direita
-                return currentOrientation.equals("E") ? "forward" : (currentOrientation.equals("N") ? "turn right" : "turn left");
-            } else { // Alvo à esquerda
-                return currentOrientation.equals("W") ? "forward" : (currentOrientation.equals("N") ? "turn left" : "turn right");
-            }
-        } else if (dy != 0) { // Prioriza movimentos ao longo do eixo Y se houver diferença
-            if (dy < 0) { // Alvo acima
-                return currentOrientation.equals("N") ? "forward" : (currentOrientation.equals("E") ? "turn left" : "turn right");
-            } else { // Alvo abaixo
-                return currentOrientation.equals("S") ? "forward" : (currentOrientation.equals("E") ? "turn right" : "turn left");
+    private String turnLeft(String ori) {
+        String[] orientations = {"N", "E", "S", "W"};
+        int i = Arrays.asList(orientations).indexOf(ori);
+        return orientations[(i - 1 + 4) % 4];
+    }
+
+    // Decide se virar ou andar para ir para a célula vizinha
+    private String determineTurnOrForward(Location next) {
+        int dx = next.x - currentLocation.x;
+        int dy = next.y - currentLocation.y;
+
+        String neededDir = null;
+        if (dx == 1) neededDir = "E";
+        else if (dx == -1) neededDir = "W";
+        else if (dy == 1) neededDir = "S";
+        else if (dy == -1) neededDir = "N";
+
+        if (currentOrientation.equals(neededDir)) {
+            return "forward";
+        } else if (turnLeft(currentOrientation).equals(neededDir)) {
+            return "turn left";
+        } else if (turnRight(currentOrientation).equals(neededDir)) {
+            return "turn right";
+        } else {
+            return "turn right"; // fallback
+        }
+    }
+
+    // Busca caminho usando BFS
+    private List<Location> bfsPath(Location start, Location goal) {
+        Queue<Location> queue = new LinkedList<>();
+        Map<Location, Location> cameFrom = new HashMap<>();
+        queue.add(start);
+        cameFrom.put(start, null);
+
+        while (!queue.isEmpty()) {
+            Location current = queue.poll();
+            if (current.equals(goal)) break;
+
+            for (String dir : List.of("N", "E", "S", "W")) {
+                Location neighbor = getAdjacentLocation(current, dir);
+                if (neighbor == null) continue;
+                String cellStatus = knownMap.getOrDefault(neighbor, "U");
+                if (!cellStatus.equals("W") && !cameFrom.containsKey(neighbor)) {
+                    queue.add(neighbor);
+                    cameFrom.put(neighbor, current);
+                }
             }
         }
-        return "suck"; // Deve sugar se já estiver no alvo sujo
+
+        if (!cameFrom.containsKey(goal)) return null;
+
+        List<Location> path = new LinkedList<>();
+        for (Location at = goal; at != null; at = cameFrom.get(at)) {
+            path.add(0, at);
+        }
+        return path;
+    }
+
+    // Busca a célula desconhecida mais próxima
+    private Location findNearestUnknown() {
+        Queue<Location> queue = new LinkedList<>();
+        Set<Location> visited = new HashSet<>();
+        queue.add(currentLocation);
+        visited.add(currentLocation);
+
+        while (!queue.isEmpty()) {
+            Location current = queue.poll();
+            for (String dir : List.of("N", "E", "S", "W")) {
+                Location neighbor = getAdjacentLocation(current, dir);
+                if (neighbor == null) continue;
+                if (visited.contains(neighbor)) continue;
+
+                String status = knownMap.getOrDefault(neighbor, "U");
+                if (status.equals("U")) {
+                    return neighbor;
+                }
+                if (!status.equals("W")) {
+                    queue.add(neighbor);
+                    visited.add(neighbor);
+                }
+            }
+        }
+        return null;
     }
 
     public int getMoveCount() {

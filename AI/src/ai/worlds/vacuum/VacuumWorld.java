@@ -65,59 +65,10 @@ public class VacuumWorld extends GridEnvironment
      */
     public int performanceMeasure(Agent a) {
         AgentBody body = a.body;
+        a.score = body.container.size() - a.getMoveCount();
+        System.out.println("DEBUG: Performance Measure (Limpeza - Movimentos) para " + a.getClass().getSimpleName() + ": Sujeiras limpas = " + body.container.size() + ", Movimentos = " + a.getMoveCount() + ", Score calculado = " + a.score);
         
-        // --- Cálculo do Score Padrão (Jill Zimmerman) ---
-        int standardScore = 100 * body.container.size() - step;
-        if (!body.alive && !(body.loc.x == 1 && body.loc.y == 1)) {
-            standardScore = standardScore - 1000;
-        }
-        a.score = standardScore; // Armazena no campo 'score' do agente
-
-        System.out.println("DEBUG: Performance Measure Padrão para " + a.getClass().getSimpleName() + ": Sujeiras limpas (container size) = " + body.container.size() + ", Passos = " + step + ", Score calculado = " + standardScore);
-
-        // --- Cálculo e Armazenamento do Score Proposto 1 (Limpeza) ---
-        // Aqui, você usaria o valor ATUAL do container, que é o correto no final do trial.
-        a.scoreProposed1 = body.container.size(); // Armazena no campo 'scoreProposed1'
-        System.out.println("DEBUG2: Performance Measure 1 (Limpeza) para " + a.getClass().getSimpleName() + ": Sujeiras limpas (container size) = " + a.scoreProposed1 + ", Score calculado = " + a.scoreProposed1);
-
-        // --- Cálculo e Armazenamento do Score Proposto 2 (Limpeza - Movimentos) ---
-        a.scoreProposed2 = body.container.size() - a.getMoveCount(); // Armazena no campo 'scoreProposed2'
-        System.out.println("DEBUG3: Performance Measure 2 (Limpeza - Movimentos) para " + a.getClass().getSimpleName() + ": Sujeiras limpas = " + body.container.size() + ", Movimentos = " + a.getMoveCount() + ", Score calculado = " + a.scoreProposed2);
-        
-        return a.score; // Retorna o score padrão, pois é o que o Environment espera em takeStep()
-    }
-    
-//    public int performanceMeasure(Agent a) {
-//        AgentBody body = a.body;
-//        // O score é 100 * o número de sujeiras no container do agente menos o número de passos
-//        int score = 100 * body.container.size() - step;
-//        if (! body.alive && !(body.loc.x==1 && body.loc.y==1)) score = score - 1000;
-//        a.score=score;
-//        System.out.println("DEBUG: Performance Measure para " + a.getClass().getSimpleName() + ": Sujeiras limpas (container size) = " + body.container.size() + ", Passos = " + step + ", Score calculado = " + score);
-//        return score;
-//    }
-//    public int performanceMeasure(Agent a) {
-//    	AgentBody body = a.body;
-//    	int score = 100 * body.container.size() - step;
-//    	if (! body.alive && !(body.loc.x==1 && body.loc.y==1)) score = score - 1000;
-//    	a.score=score;
-//    	return score;
-//    }
-    
-    // number of cleansed positions
-    public int performanceMeasure1(Agent a) {
-    	return a.scoreProposed1;
-//    	AgentBody body = a.body;
-//    	System.out.println("DEBUG2: Performance Measure 2 para " + a.getClass().getSimpleName() + ": Sujeiras limpas (container size) = " + body.container.size() + ", Score calculado = " + body.container.size());
-//    	return a.body.container.size();
-    }
-    
-    public int performanceMeasure2(Agent a) {
-    	return a.scoreProposed2;
-//    	AgentBody body = a.body;
-//    	System.out.println("DEBUG3: Performance Measure 3 para " + a.getClass().getSimpleName() + ": Sujeiras limpas (container size) = " + body.container.size() + ", Score calculado = " + (body.container.size() - a.getMoveCount()));
-//    	return a.body.container.size() - a.getMoveCount();
-    }
-    
+        return a.score;
+    }    
 }
 

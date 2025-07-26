@@ -20,7 +20,7 @@ public abstract class Environment implements Runnable
 	/**
 	 * The maximum number of steps.
 	 */
-	public int maxSteps = 500;
+	public int maxSteps = 150;
 	/**
 	 * Flag to indicate whether to display
 	 */
@@ -41,9 +41,6 @@ public abstract class Environment implements Runnable
 	 */
 	public abstract int performanceMeasure(Agent a);
 	
-	public abstract int performanceMeasure1(Agent a);
-	
-	public abstract int performanceMeasure2(Agent a);
 	/**
 	 * A snapshot of the environment.
 	 */
