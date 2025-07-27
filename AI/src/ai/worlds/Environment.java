@@ -20,7 +20,7 @@ public abstract class Environment implements Runnable
 	/**
 	 * The maximum number of steps.
 	 */
-	public int maxSteps = 150;
+	public int maxSteps = 250;
 	/**
 	 * Flag to indicate whether to display
 	 */

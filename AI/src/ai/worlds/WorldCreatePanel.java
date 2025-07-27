@@ -298,7 +298,7 @@ public class WorldCreatePanel extends JPanel implements ActionListener, ItemList
     	if (envs.getSelectedItem() ==  "Vacuum World") {
     		int x = Integer.parseInt(xsize.getText());
         	int y = Integer.parseInt(ysize.getText());
-    		world = new VacuumWorld(a, x, y, .25, holder);
+    		world = new VacuumWorld(a, x, y, .4, holder);
     		holder.setTitle("Artificial Intelligence - Agents and Environments - Vacuum World");
     	}
     	else {
