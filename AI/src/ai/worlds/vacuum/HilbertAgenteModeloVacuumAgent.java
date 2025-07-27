@@ -12,7 +12,7 @@ import ai.worlds.Location;
  * <p>O agente utiliza algoritmos de busca (BFS) para encontrar os melhores caminhos
  * e gerenciar filas de locais sujos e a serem explorados.</p>
  *
- * @author Seu Nome (ou Nomes da Equipe)
+ * @author Hilbert França
  * @version 1.0
  * @since 2023-10-27
  */

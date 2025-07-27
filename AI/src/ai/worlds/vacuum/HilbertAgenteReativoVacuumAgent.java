@@ -9,7 +9,7 @@ import java.util.Random;
  * condição-ação fixas, sem manter um modelo interno do ambiente ou memória
  * de estados passados.
  *
- * @author Seu Nome (ou Nomes da Equipe)
+ * @author Hilbert França
  * @version 1.0
  * @since 2023-10-27
  */

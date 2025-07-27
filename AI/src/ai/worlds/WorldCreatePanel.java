@@ -21,8 +21,7 @@ import java.util.Map;
  * configurações de tamanho do mundo e a execução de múltiplos testes (trials)
  * com resultados exibidos.</p>
  *
- * @author Jill Zimmerman -- jill.zimmerman@goucher.edu (Base original)
- * @author Seu Nome (ou Nomes da Equipe, para modificações)
+ * @author Hilbert França
  * @version 1.0
  * @since Original (Adaptado e expandido para novos agentes)
  */
